@@ -18,9 +18,9 @@ for i in range(1, 30):
         continue
     nthreads.append(cpus)
 
-sizes = [(4096 << x) for x in range(0, 1)]
+sizes = [(4096 << x) for x in range(0, 17)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
-reuses = [0, 1, 2, 3, 4, 5]
+reuses = [0, 1, 2, 3, 5]
 
 
 def os_do(cmd):
