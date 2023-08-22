@@ -3,8 +3,18 @@ import multiprocessing
 import datetime
 import sys
 
+usage = "Specify either 'memset' or 'memcpy' as argument"
+assert len(sys.argv) > 1, usage
+todo = sys.argv[1]
+
+TODOS = {
+    "memcpy": (5, set(), 2**32, 500),
+    "memset": (4, {0, 32, 2048, 4032}, 2**34, 2000)
+}
+assert todo in TODOS, usage
+
 NCPUS = multiprocessing.cpu_count()
-exes = [("memcpy-erms", 0), ("memcpy-t", 1), ("memcpy-nt", 2)]
+exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
 nthreads = []
 for i in range(0, 3):
     cpus = 1 << i
@@ -18,9 +28,12 @@ for i in range(1, 30):
         continue
     nthreads.append(cpus)
 
-sizes = [(4096 << x) for x in range(0, 17)]
+sizes = [(4096 << x) for x in range(0, 2)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
-reuses = [0, 1, 2, 3, 5]
+reuses = [x for x in range(0, TODOS[todo][0])]
+todo_aligns = TODOS[todo][1]
+max_num = TODOS[todo][2]
+min_it = TODOS[todo][3]
 
 
 def os_do(cmd):
@@ -32,19 +45,24 @@ date_uid = str(datetime.datetime.now()).replace(" ", "-").replace(":",
                                                                   "-").replace(
                                                                       ".", "-")
 DST_FILE = "results-{}.txt".format(date_uid)
-if len(sys.argv) > 1:
-    DST_FILE = sys.argv[1]
-
+if len(sys.argv) > 2:
+    DST_FILE = sys.argv[2]
+last_align = None
+first = "h"
 for exe_enum in exes:
 
-    exe = exe_enum[0]
+    exe = exe_enum[0].format(todo)
     enum = exe_enum[1]
-    os_do("gcc -O3 -DTODO={} -march=native memcpy-bench-multi.c -o {}".format(
-        enum, exe))
+    os_do("gcc -O3 -DTODO={} -march=native {}-bench-multi.c -o {}".format(
+        enum, todo, exe))
     for nthread in nthreads:
         for size in sizes:
             for reuse in reuses:
                 for align in aligns:
-                    it = max(int((2**32) / size), 500)
-                    os_do("./{} {} {} {} {} {} >> {}".format(
-                        exe, nthread, size, it, align, reuse, DST_FILE))
+                    if len(todo_aligns) != 0:
+                        if align not in todo_aligns:
+                            continue
+                    it = max(int(max_num / size), min_it)
+                    os_do("./{} {} {} {} {} {} {} >> {}".format(
+                        exe, nthread, size, it, align, reuse, first, DST_FILE))
+                    first = "N"

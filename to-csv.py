@@ -110,7 +110,7 @@ class Results():
         self.keys_ = {}
 
     def add_line(self, line):
-        if not line.startswith("memcpy"):
+        if (not line.startswith("memcpy")) and (not line.startswith("memset")):
             return
 
         key = line_key(line)
@@ -133,20 +133,30 @@ class Results():
         funcs_hdr = []
 
         nthr_hdr = []
+
+        func_prefix = None
         for nthread in sorted(self.keys_["nthreads"]):
             nthr_hdr.append(str(nthread))
 
             func_hdr_local = []
             for func in sorted(self.keys_["funcs"]):
-                func_hdr_local.append(str(func).replace("memcpy_", ""))
+                if func_prefix is None:
+                    if "memcpy" in func:
+                        func_prefix = "memcpy"
+                    if "memset" in func:
+                        assert func_prefix is None
+                        func_prefix = "memset"
+                    assert func_prefix is not None
+                func_hdr_local.append(str(func).replace(func_prefix + "_", ""))
             funcs_hdr.append(",".join(func_hdr_local) + ",")
 
         funcs_hdr = "impl=," + ",".join(funcs_hdr).upper()
         nthr_hdr = "nthreads=," + ",,,,".join(nthr_hdr)
+        print("Function: " + func_prefix)
         print(funcs_hdr)
         print(nthr_hdr)
 
-        operation_strs = {
+        operation_strs_memcpy = {
             0: "Standard",
             1: "PingPong",
             2: "Forward",
@@ -154,11 +164,23 @@ class Results():
             4: "Read",
             5: "Read-Dep"
         }
+        operation_strs_memset = {
+            0: "Standard",
+            1: "Forward",
+            2: "Read",
+            3: "Read-Dep",
+        }
+        operation_strs = None
+        if func_prefix == "memcpy":
+            operation_strs = operation_strs_memcpy
+        else:
+            operation_strs = operation_strs_memset
+
         for operation in sorted(self.keys_["operations"]):
             if operation != int(op):
                 continue
-            print("\nOperation={}/".format(operation,
-                                           operation_strs[int(operation)]))
+            print("\nOperation={}/{}".format(operation,
+                                             operation_strs[int(operation)]))
             for alignment in sorted(self.keys_["alignments"]):
                 print("\nAlign={}".format(alignment))
                 for size in sorted(self.keys_["sizes"]):

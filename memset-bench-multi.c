@@ -11,8 +11,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <x86intrin.h>
-// gcc -DI_NO_HIDDEN_LABELS -O3 -march=native memcpy-bench-multi.c -o
-// memcpy-bench-multi
+// gcc -DI_NO_HIDDEN_LABELS -O3 -march=native memset-bench-multi.c -o
+// memset-bench-multi
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define NEVER_INLINE  __attribute__((noinline))
 #define CONST_ATTR    __attribute__((const))
@@ -80,7 +80,7 @@ static pthread_barrier_t g_barrier;
 
 typedef struct targs {
     uint8_t * dst;
-    uint8_t * src;
+    uint8_t   val;
 
     pthread_t tid;
     uint64_t  ns_out;
@@ -88,86 +88,65 @@ typedef struct targs {
     uint8_t * sink;
 } targs_t;
 
-void * __memcpy_ssse3_back(void *, void const *, size_t);
-void * __memcpy_erms(void *, void const *, size_t);
-void * __memcpy_sse2_unaligned_erms(void *, void const *, size_t);
-void * __memcpy_sse2_unaligned(void *, void const *, size_t);
-void * __memcpy_evex_unaligned_erms(void *, void const *, size_t);
-void * __memcpy_evex_unaligned(void *, void const *, size_t);
-
-#define ssse3     __memcpy_ssse3_back
-#define erms      __memcpy_erms
-#define sse2_erms __memcpy_sse2_unaligned_erms
-#define sse2      __memcpy_sse2_unaligned
-#define evex_erms __memcpy_evex_unaligned_erms
-#define evex      __memcpy_evex_unaligned
+#define ssse3     __memset_ssse3_back
+#define erms      __memset_erms
+#define sse2_erms __memset_sse2_unaligned_erms
+#define sse2      __memset_sse2_unaligned
+#define evex_erms __memset_evex_unaligned_erms
+#define evex      __memset_evex_unaligned
 
 
 static void
-memcpy_t(uint8_t * dst, uint8_t const * src, size_t len) {
-    __m256i v0, v1, v2, v3;
+memset_t(uint8_t * dst, uint8_t val, size_t len) {
+    __m256i v0 = _mm256_set1_epi8(val);
 #define VEC_SIZE "32"
     // clang-format off
     __asm__ volatile(
         "1:\n"
-        "vmovdqu (" VEC_SIZE " * 0)(%[src]), %[v0]\n"
-        "vmovdqu (" VEC_SIZE " * 1)(%[src]), %[v1]\n"
-        "vmovdqu (" VEC_SIZE " * 2)(%[src]), %[v2]\n"
-        "vmovdqu (" VEC_SIZE " * 3)(%[src]), %[v3]\n"
         "vmovdqa %[v0], (" VEC_SIZE " * 0)(%[dst])\n"
-        "vmovdqa %[v1], (" VEC_SIZE " * 1)(%[dst])\n"
-        "vmovdqa %[v2], (" VEC_SIZE " * 2)(%[dst])\n"
-        "vmovdqa %[v3], (" VEC_SIZE " * 3)(%[dst])\n"
+        "vmovdqa %[v0], (" VEC_SIZE " * 1)(%[dst])\n"
+        "vmovdqa %[v0], (" VEC_SIZE " * 2)(%[dst])\n"
+        "vmovdqa %[v0], (" VEC_SIZE " * 3)(%[dst])\n"
         "subq $(" VEC_SIZE " * -4), %[dst]\n"
-        "subq $(" VEC_SIZE " * -4), %[src]\n"
         "addq $(" VEC_SIZE " * -4), %[len]\n"
         "jg 1b"
-        : [src] "+r"(src), [dst] "+r"(dst), [len] "+r"(len), [v0] "=&v"(v0),
-          [v1] "=&v"(v1), [v2] "=&v"(v2), [v3] "=&v"(v3)
-        :
+        :  [dst] "+r"(dst), [len] "+r"(len)
+        :  [v0] "v"(v0)
         : "cc", "memory");
     // clang-format on
 #undef VEC_SIZE
 };
 
 static void
-memcpy_nt(uint8_t * dst, uint8_t const * src, size_t len) {
-    __m256i v0, v1, v2, v3;
+memset_nt(uint8_t * dst, uint8_t val, size_t len) {
+    __m256i v0 = _mm256_set1_epi8(val);
 #define VEC_SIZE "32"
     // clang-format off
     __asm__ volatile(
         "1:\n"
-        "vmovdqu (" VEC_SIZE " * 0)(%[src]), %[v0]\n"
-        "vmovdqu (" VEC_SIZE " * 1)(%[src]), %[v1]\n"
-        "vmovdqu (" VEC_SIZE " * 2)(%[src]), %[v2]\n"
-        "vmovdqu (" VEC_SIZE " * 3)(%[src]), %[v3]\n"
         "vmovntdq %[v0], (" VEC_SIZE " * 0)(%[dst])\n"
-        "vmovntdq %[v1], (" VEC_SIZE " * 1)(%[dst])\n"
-        "vmovntdq %[v2], (" VEC_SIZE " * 2)(%[dst])\n"
-        "vmovntdq %[v3], (" VEC_SIZE " * 3)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 1)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 2)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 3)(%[dst])\n"
         "subq $(" VEC_SIZE " * -4), %[dst]\n"
-        "subq $(" VEC_SIZE " * -4), %[src]\n"
         "addq $(" VEC_SIZE " * -4), %[len]\n"
         "jg 1b"
-        : [src] "+r"(src), [dst] "+r"(dst), [len] "+r"(len), [v0] "=&v"(v0),
-          [v1] "=&v"(v1), [v2] "=&v"(v2), [v3] "=&v"(v3)
-        :
+        :  [dst] "+r"(dst), [len] "+r"(len)
+        :  [v0] "v"(v0)
         : "cc", "memory");
     // clang-format on
 #undef VEC_SIZE
 };
 
+
 static void
-memcpy_erms(uint8_t * dst, uint8_t const * src, size_t len) {
-    __asm__ volatile("rep movsb"
-                     : "+D"(dst), "+S"(src), "+c"(len)
-                     :
-                     : "memory");
+memset_erms(uint8_t * dst, uint8_t val, size_t len) {
+    __asm__ volatile("rep stosb" : "+D"(dst), "+c"(len) : "a"(val) : "memory");
 }
 
 
-static size_t
-use(uint8_t * dst, uint8_t const * src, size_t len) {
+static uint8_t
+use(uint8_t * dst, size_t len) {
     __m256i v0, v1, v2, v3;
 #define VEC_SIZE "32"
     // clang-format off
@@ -203,11 +182,11 @@ use(uint8_t * dst, uint8_t const * src, size_t len) {
 # define TODO 3
 #endif
 #if TODO == 0
-# define FUNC memcpy_erms
+# define FUNC memset_erms
 #elif TODO == 1
-# define FUNC memcpy_t
+# define FUNC memset_t
 #elif TODO == 2
-# define FUNC memcpy_nt
+# define FUNC memset_nt
 #else
 # error "Unknown TODO"
 #endif
@@ -224,9 +203,9 @@ bench(void * arg) {
     bench_iter &= -1;
 
     uint8_t * dst  = ((targs_t *)arg)->dst;
-    uint8_t * src  = ((targs_t *)arg)->src;
+    uint8_t   val  = ((targs_t *)arg)->val;
     uint8_t * sink = ((targs_t *)arg)->sink;
-    assert(reuse <= 5);
+    assert(reuse <= 3);
 
     switch (reuse) {
         case 0:
@@ -234,7 +213,7 @@ bench(void * arg) {
             start = get_ts();
             __asm__ volatile(".p2align 6\n" : : :);
             for (; bench_iter; --bench_iter) {
-                FUNC(dst, src, sz);
+                FUNC(dst, val, sz);
             }
             end = get_ts();
             break;
@@ -243,8 +222,8 @@ bench(void * arg) {
             start = get_ts();
             __asm__ volatile(".p2align 6\n" : : :);
             for (; bench_iter; bench_iter -= 2) {
-                FUNC(dst, src, sz);
-                FUNC(src, dst, sz);
+                FUNC(dst, val, sz);
+                COMPILER_DO_NOT_OPTIMIZE_OUT(memcpy(sink, dst, sz));
             }
             end = get_ts();
             break;
@@ -253,39 +232,18 @@ bench(void * arg) {
             start = get_ts();
             __asm__ volatile(".p2align 6\n" : : :);
             for (; bench_iter; bench_iter -= 2) {
-                FUNC(dst, src, sz);
-                FUNC(sink, dst, sz);
+                FUNC(dst, val, sz);
+                COMPILER_DO_NOT_OPTIMIZE_OUT(use(dst, sz));
             }
             end = get_ts();
             break;
-
         case 3:
             pthread_barrier_wait(&g_barrier);
             start = get_ts();
             __asm__ volatile(".p2align 6\n" : : :);
             for (; bench_iter; bench_iter -= 2) {
-                FUNC(dst, src, sz);
-                FUNC(sink, dst, sz);
-            }
-            end = get_ts();
-            break;
-        case 4:
-            pthread_barrier_wait(&g_barrier);
-            start = get_ts();
-            __asm__ volatile(".p2align 6\n" : : :);
-            for (; bench_iter; bench_iter -= 2) {
-                FUNC(dst, src, sz);
-                COMPILER_DO_NOT_OPTIMIZE_OUT(use(dst, src, sz));
-            }
-            end = get_ts();
-            break;
-        case 5:
-            pthread_barrier_wait(&g_barrier);
-            start = get_ts();
-            __asm__ volatile(".p2align 6\n" : : :);
-            for (; bench_iter; bench_iter -= 2) {
-                FUNC(dst, src, sz);
-                src += use(dst, src, sz);
+                FUNC(dst, val, sz);
+                val |= use(dst, sz);
             }
             end = get_ts();
             break;
@@ -323,9 +281,10 @@ main(int argc, char ** argv) {
     uint32_t iter = strtoul(argv[3], NULL, 10);
     iter &= -1;
     uint32_t align = argc >= 5 ? strtoul(argv[4], NULL, 10) : 0;
-    uint32_t reuse = argc >= 6 ? strtoul(argv[5], NULL, 10) : 10;
-    assert(reuse <= 5);
+    uint32_t reuse = argc >= 6 ? strtoul(argv[5], NULL, 10) : 0;
+    assert(reuse <= 3);
     align %= 4096;
+    align &= -32;
     assert(nthreads != 0 && size != 0 && iter != 0);
     if (nthreads < 0) {
         nthreads = sysconf(_SC_NPROCESSORS_ONLN);
@@ -341,30 +300,31 @@ main(int argc, char ** argv) {
     assert(pthread_attr_setstacksize(&attr, 16384) == 0);
 
     targs_t targs[nthreads];
-    for (long i = 0; i < nthreads; ++i) {
-        uint8_t * dst  = (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
-                                         MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
-        uint8_t * sink = (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
-                                         MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
-        uint8_t * src =
-            (uint8_t *)mmap(NULL, size + align, PROT_READ | PROT_WRITE,
-                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
-        assert(dst != MAP_FAILED && src != MAP_FAILED);
-        src += align;
-        targs[i].dst  = dst;
-        targs[i].src  = src;
-        targs[i].sink = sink;
-        assert(pthread_create(&(targs[i].tid), &attr, bench,
-                              (void *)(targs + i)) == 0);
+    for (uint8_t val = 0; val < 2; ++val) {
+        for (long i = 0; i < nthreads; ++i) {
+            uint8_t * dst =
+                (uint8_t *)mmap(NULL, size + align, PROT_READ | PROT_WRITE,
+                                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
+            uint8_t * sink =
+                (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
+                                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
+            assert(dst != MAP_FAILED);
+            targs[i].dst  = dst + align;
+            targs[i].val  = val;
+            targs[i].sink = sink;
+            assert(pthread_create(&(targs[i].tid), &attr, bench,
+                                  (void *)(targs + i)) == 0);
+        }
+
+        for (long i = 0; i < nthreads; ++i) {
+            assert(pthread_join(targs[i].tid, NULL) == 0);
+        }
+        for (long i = 0; i < nthreads; ++i) {
+            munmap(targs[i].dst, size + align);
+            munmap(targs[i].sink, size);
+        }
     }
-    for (long i = 0; i < nthreads; ++i) {
-        assert(pthread_join(targs[i].tid, NULL) == 0);
-    }
-    for (long i = 0; i < nthreads; ++i) {
-        munmap(targs[i].dst, size);
-        munmap(targs[i].src - align, size + align);
-        munmap(targs[i].sink, size);
-    }
+
 #if 0
     printf("Nthreads = %ld, Size = %zu Bytes, Iter = %u, Align = %u\n", nthreads, size,
            iter, align);

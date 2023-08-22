@@ -1,7 +1,7 @@
 # Run Benchmarks
 
 ```
-$> python3 runall.py <optional destination file>
+$> python3 runall.py <'memset'/'memcpy'> <optional destination file>
 ```
 
 # Results to CSV
