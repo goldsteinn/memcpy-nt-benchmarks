@@ -28,7 +28,7 @@ for i in range(1, 30):
         continue
     nthreads.append(cpus)
 
-sizes = [(4096 << x) for x in range(0, 2)]
+sizes = [(4096 << x) for x in range(0, 17)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
 reuses = [x for x in range(0, TODOS[todo][0])]
 todo_aligns = TODOS[todo][1]
@@ -38,7 +38,7 @@ min_it = TODOS[todo][3]
 
 def os_do(cmd):
     print(cmd)
-    os.system(cmd)
+#    os.system(cmd)
 
 
 date_uid = str(datetime.datetime.now()).replace(" ", "-").replace(":",
