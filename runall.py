@@ -41,6 +41,7 @@ def os_do(cmd):
     os.system(cmd)
 
 
+
 date_uid = str(datetime.datetime.now()).replace(" ", "-").replace(":",
                                                                   "-").replace(
                                                                       ".", "-")
@@ -66,3 +67,5 @@ for exe_enum in exes:
                     os_do("./{} {} {} {} {} {} {} >> {}".format(
                         exe, nthread, size, it, align, reuse, first, DST_FILE))
                     first = "N"
+                    if len(sys.argv) > 3:
+                        sys.exit(0)

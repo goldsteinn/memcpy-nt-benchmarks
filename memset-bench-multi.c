@@ -305,19 +305,21 @@ main(int argc, char ** argv) {
     fprintf(stderr, "Running\n");
     for (uint8_t val = 0; val < 2; ++val) {
         for (long i = 0; i < nthreads; ++i) {
-            fprintf(stderr, "Creating Thread: %lu\n", i);
+            fprintf(stderr, "Creating Memory: %lu\n", i);
             uint8_t * dst =
                 (uint8_t *)mmap(NULL, size + align, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
             uint8_t * sink =
                 (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
+            fprintf(stderr, "Checking memory\n");
             assert(sink != MAP_FAILED);
             assert(dst != MAP_FAILED);
             assert((align % 32) == 0);
             targs[i].dst  = dst + align;
             targs[i].val  = val;
             targs[i].sink = sink;
+            fprintf(stderr, "Creating actual thread\n");
             assert(pthread_create(&(targs[i].tid), &attr, bench,
                                   (void *)(targs + i)) == 0);
         }
