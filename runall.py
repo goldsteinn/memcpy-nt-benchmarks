@@ -53,7 +53,7 @@ for exe_enum in exes:
 
     exe = exe_enum[0].format(todo)
     enum = exe_enum[1]
-    os_do("gcc -O3 -DTODO={} -march=native {}-bench-multi.c -o {}".format(
+    os_do("gcc -O3 -lpthread -DTODO={} -march=native {}-bench-multi.c -o {}".format(
         enum, todo, exe))
     for nthread in nthreads:
         for size in sizes:
