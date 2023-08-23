@@ -263,7 +263,7 @@ main(int argc, char ** argv) {
                argv[0]);
         return 0;
     }
-
+    fprintf(stderr, "Getting Conf\n");
 
     long   nthreads = strtol(argv[1], NULL, 10);
     char * end;
@@ -282,6 +282,8 @@ main(int argc, char ** argv) {
     iter &= -1;
     uint32_t align = argc >= 5 ? strtoul(argv[4], NULL, 10) : 0;
     uint32_t reuse = argc >= 6 ? strtoul(argv[5], NULL, 10) : 0;
+
+    fprintf(stderr, "Setting of threads\n");
     assert(reuse <= 3);
     align %= 4096;
     align &= -32;
@@ -300,15 +302,19 @@ main(int argc, char ** argv) {
     assert(pthread_attr_setstacksize(&attr, 16384) == 0);
 
     targs_t targs[nthreads];
+    fprintf(stderr, "Running\n");
     for (uint8_t val = 0; val < 2; ++val) {
         for (long i = 0; i < nthreads; ++i) {
+            fprintf(stderr, "Creating Thread: %lu\n", i);
             uint8_t * dst =
                 (uint8_t *)mmap(NULL, size + align, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
             uint8_t * sink =
                 (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
+            assert(sink != MAP_FAILED);
             assert(dst != MAP_FAILED);
+            assert((align % 32) == 0);
             targs[i].dst  = dst + align;
             targs[i].val  = val;
             targs[i].sink = sink;
@@ -320,6 +326,7 @@ main(int argc, char ** argv) {
             assert(pthread_join(targs[i].tid, NULL) == 0);
         }
         for (long i = 0; i < nthreads; ++i) {
+            fprintf(stderr, "Unmapping Thread: %lu\n", i);
             munmap(targs[i].dst, size + align);
             munmap(targs[i].sink, size);
         }
