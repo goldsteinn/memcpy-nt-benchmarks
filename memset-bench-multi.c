@@ -193,10 +193,11 @@ use(uint8_t * dst, size_t len) {
 
 #define NAME V_TO_STR(FUNC)
 
+#define LOG(...) //fprintf(stderr, __VA_ARGS__)
 
 void * BENCH_FUNC
 bench(void * arg) {
-    fprintf(stderr, "In Thread\n");
+    LOG("In Thread\n");
     struct timespec start, end;
     uint32_t        bench_iter = g_iter;
     uint32_t        reuse      = g_reuse;
@@ -207,7 +208,7 @@ bench(void * arg) {
     uint8_t   val  = ((targs_t *)arg)->val;
     uint8_t * sink = ((targs_t *)arg)->sink;
     assert(reuse <= 3);
-    fprintf(stderr, "About to run...\n");
+    LOG("About to run...\n");
     switch (reuse) {
         case 0:
             pthread_barrier_wait(&g_barrier);
@@ -264,7 +265,7 @@ main(int argc, char ** argv) {
                argv[0]);
         return 0;
     }
-    fprintf(stderr, "Getting Conf\n");
+    LOG("Getting Conf\n");
 
     long   nthreads = strtol(argv[1], NULL, 10);
     char * end;
@@ -284,7 +285,7 @@ main(int argc, char ** argv) {
     uint32_t align = argc >= 5 ? strtoul(argv[4], NULL, 10) : 0;
     uint32_t reuse = argc >= 6 ? strtoul(argv[5], NULL, 10) : 0;
 
-    fprintf(stderr, "Setting of threads\n");
+    LOG("Setting of threads\n");
     assert(reuse <= 3);
     align %= 4096;
     align &= -32;
@@ -303,24 +304,24 @@ main(int argc, char ** argv) {
     assert(pthread_attr_setstacksize(&attr, 524288) == 0);
 
     targs_t targs[nthreads];
-    fprintf(stderr, "Running\n");
+    LOG("Running\n");
     for (uint8_t val = 0; val < 2; ++val) {
         for (long i = 0; i < nthreads; ++i) {
-            fprintf(stderr, "Creating Memory: %lu\n", i);
+            LOG("Creating Memory: %lu\n", i);
             uint8_t * dst =
                 (uint8_t *)mmap(NULL, size + align, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
             uint8_t * sink =
                 (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0L);
-            fprintf(stderr, "Checking memory\n");
+            LOG("Checking memory\n");
             assert(sink != MAP_FAILED);
             assert(dst != MAP_FAILED);
             assert((align % 32) == 0);
             targs[i].dst  = dst + align;
             targs[i].val  = val;
             targs[i].sink = sink;
-            fprintf(stderr, "Creating actual thread\n");
+            LOG("Creating actual thread\n");
             assert(pthread_create(&(targs[i].tid), &attr, bench,
                                   (void *)(targs + i)) == 0);
         }
@@ -329,7 +330,7 @@ main(int argc, char ** argv) {
             assert(pthread_join(targs[i].tid, NULL) == 0);
         }
         for (long i = 0; i < nthreads; ++i) {
-            fprintf(stderr, "Unmapping Thread: %lu\n", i);
+            LOG("Unmapping Thread: %lu\n", i);
             munmap(targs[i].dst, size + align);
             munmap(targs[i].sink, size);
         }
