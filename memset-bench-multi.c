@@ -196,6 +196,7 @@ use(uint8_t * dst, size_t len) {
 
 void * BENCH_FUNC
 bench(void * arg) {
+    fprintf(stderr, "In Thread\n");
     struct timespec start, end;
     uint32_t        bench_iter = g_iter;
     uint32_t        reuse      = g_reuse;
@@ -206,7 +207,7 @@ bench(void * arg) {
     uint8_t   val  = ((targs_t *)arg)->val;
     uint8_t * sink = ((targs_t *)arg)->sink;
     assert(reuse <= 3);
-
+    fprintf(stderr, "About to run...\n");
     switch (reuse) {
         case 0:
             pthread_barrier_wait(&g_barrier);
@@ -299,7 +300,7 @@ main(int argc, char ** argv) {
     pthread_attr_t attr;
 
     assert(pthread_attr_init(&attr) == 0);
-    assert(pthread_attr_setstacksize(&attr, 16384) == 0);
+    assert(pthread_attr_setstacksize(&attr, 524288) == 0);
 
     targs_t targs[nthreads];
     fprintf(stderr, "Running\n");
