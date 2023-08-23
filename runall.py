@@ -16,14 +16,14 @@ assert todo in TODOS, usage
 NCPUS = multiprocessing.cpu_count()
 exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
 nthreads = []
-for i in range(0, 3):
+for i in range(0, 4):
     cpus = 1 << i
     if cpus > NCPUS:
         continue
     nthreads.append(cpus)
 
 for i in range(1, 30):
-    cpus = 8 * i
+    cpus = 16 * i
     if cpus > NCPUS:
         continue
     nthreads.append(cpus)
