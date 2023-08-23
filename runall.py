@@ -38,7 +38,7 @@ min_it = TODOS[todo][3]
 
 def os_do(cmd):
     print(cmd)
-#    os.system(cmd)
+    os.system(cmd)
 
 
 date_uid = str(datetime.datetime.now()).replace(" ", "-").replace(":",
