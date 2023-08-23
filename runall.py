@@ -9,7 +9,7 @@ todo = sys.argv[1]
 
 TODOS = {
     "memcpy": (5, set(), 2**32, 500),
-    "memset": (4, {0, 32, 2048, 4032}, 2**34, 2000)
+    "memset": (4, {0, 32, 2048, 4032}, 2**32, 500)
 }
 assert todo in TODOS, usage
 
