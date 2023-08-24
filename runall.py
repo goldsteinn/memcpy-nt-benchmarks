@@ -7,10 +7,7 @@ usage = "Specify either 'memset' or 'memcpy' as argument"
 assert len(sys.argv) > 1, usage
 todo = sys.argv[1]
 
-TODOS = {
-    "memcpy": (5, set(), 2**32, 500),
-    "memset": (4, {0, 32, 2048, 4032}, 2**32, 500)
-}
+TODOS = {"memcpy": (5, set(), 2**32, 500), "memset": (4, {0}, 2**32, 500)}
 assert todo in TODOS, usage
 
 NCPUS = multiprocessing.cpu_count()
@@ -28,7 +25,7 @@ for i in range(1, 30):
         continue
     nthreads.append(cpus)
 
-sizes = [(4096 << x) for x in range(0, 17)]
+sizes = [(4096 << x) for x in range(2, 17)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
 reuses = [x for x in range(0, TODOS[todo][0])]
 todo_aligns = TODOS[todo][1]
@@ -39,7 +36,6 @@ min_it = TODOS[todo][3]
 def os_do(cmd):
     print(cmd)
     os.system(cmd)
-
 
 
 date_uid = str(datetime.datetime.now()).replace(" ", "-").replace(":",
@@ -54,8 +50,8 @@ for exe_enum in exes:
 
     exe = exe_enum[0].format(todo)
     enum = exe_enum[1]
-    os_do("gcc -O3 -lpthread -DTODO={} -march=native {}-bench-multi.c -o {}".format(
-        enum, todo, exe))
+    os_do("gcc -O3 -lpthread -DTODO={} -march=native {}-bench-multi.c -o {}".
+          format(enum, todo, exe))
     for nthread in nthreads:
         for size in sizes:
             for reuse in reuses:
