@@ -14,17 +14,19 @@ NCPUS = multiprocessing.cpu_count()
 exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
 exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
 nthreads = []
-for i in range(0, 4):
+for i in range(0, 5):
     cpus = 1 << i
     if cpus > NCPUS:
         continue
     nthreads.append(cpus)
 
 for i in range(1, 30):
-    cpus = 16 * i
+    cpus = 32 * i
     if cpus > NCPUS:
         continue
     nthreads.append(cpus)
+if NCPUS not in nthreads:
+    nthreads.append(NCPUS)
 
 sizes = [(4096 << x) for x in range(6, 17)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
