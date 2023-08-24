@@ -12,6 +12,7 @@ assert todo in TODOS, usage
 
 NCPUS = multiprocessing.cpu_count()
 exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
+exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
 nthreads = []
 for i in range(0, 4):
     cpus = 1 << i
@@ -25,7 +26,7 @@ for i in range(1, 30):
         continue
     nthreads.append(cpus)
 
-sizes = [(4096 << x) for x in range(2, 17)]
+sizes = [(4096 << x) for x in range(6, 17)]
 aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
 reuses = [x for x in range(0, TODOS[todo][0])]
 todo_aligns = TODOS[todo][1]
