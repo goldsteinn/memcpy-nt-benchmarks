@@ -338,7 +338,7 @@ main(int argc, char ** argv) {
     pthread_attr_t attr;
 
     assert(pthread_attr_init(&attr) == 0);
-    assert(pthread_attr_setstacksize(&attr, 16384) == 0);
+    assert(pthread_attr_setstacksize(&attr, 524288) == 0);
 
     targs_t targs[nthreads];
     for (long i = 0; i < nthreads; ++i) {
