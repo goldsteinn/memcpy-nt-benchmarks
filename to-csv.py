@@ -63,7 +63,7 @@ class Result():
         self.ops = int(ops)
         self.times = []
 
-        assert self.nthread > 0 and self.nthread <= 96
+        assert self.nthread > 0 and self.nthread <= 250
         assert self.iter >= 500
         assert (self.size & (self.size - 1)) == 0
         assert self.align >= 0 and self.align < 4096
