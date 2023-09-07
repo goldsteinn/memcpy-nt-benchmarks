@@ -128,7 +128,7 @@ class Results():
         self.keys_.setdefault("alignments", set()).add(align)
         self.keys_.setdefault("operations", set()).add(ops)
 
-    def print_all(self, op):
+    def print_all(self, op, no_hdr):
         #        print(" ".join(sorted(self.keys_["funcs"])))
         funcs_hdr = []
 
@@ -152,9 +152,10 @@ class Results():
 
         funcs_hdr = "impl=," + ",".join(funcs_hdr).upper()
         nthr_hdr = "nthreads=," + ",,,,".join(nthr_hdr)
-        print("Function: " + func_prefix)
-        print(funcs_hdr)
-        print(nthr_hdr)
+        if not no_hdr:
+            print("Function: " + func_prefix)
+            print(funcs_hdr)
+            print(nthr_hdr)
 
         operation_strs_memcpy = {
             0: "Standard",
@@ -204,8 +205,9 @@ res = Results()
 lc = 0
 for line in open(sys.argv[1]):
     if (lc & ((1 << 17) - 1)) == 0:
-        print(lc)
+        #print(lc)
+        pass
     res.add_line(line)
     lc += 1
 
-res.print_all(sys.argv[2])
+res.print_all(sys.argv[2], len(sys.argv) > 3 and sys.argv[3] != "0")

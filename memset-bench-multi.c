@@ -140,6 +140,73 @@ memset_nt(uint8_t * dst, uint8_t val, size_t len) {
 
 
 static void
+memset_nt_ns(uint8_t * dst, uint8_t val, size_t len) {
+    __m256i v0 = _mm256_set1_epi8(val);
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 0)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 1)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 2)(%[dst])\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 3)(%[dst])\n"
+        "subq $(" VEC_SIZE " * -4), %[dst]\n"
+        "addq $(" VEC_SIZE " * -4), %[len]\n"
+        "jg 1b\n"
+        "sfence"
+        :  [dst] "+r"(dst), [len] "+r"(len)
+        :  [v0] "v"(v0)
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+static void
+memset_cd(uint8_t * dst, uint8_t val, size_t len) {
+    uint8_t tmp[64] __attribute__((aligned(64)));
+    __builtin_memset(tmp, val, 64);
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "addq $-128, %[len]\n"
+        "jg 1b\n"
+        "sfence"
+        :  [dst] "+r"(dst), [len] "+r"(len)
+        : [src]"r" (tmp)
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+
+static void
+memset_cd_ns(uint8_t * dst, uint8_t val, size_t len) {
+    uint8_t tmp[64] __attribute__((aligned(64)));
+    __builtin_memset(tmp, val, 64);
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "addq $-128, %[len]\n"
+        "jg 1b"
+        :  [dst] "+r"(dst), [len] "+r"(len)
+        : [src]"r" (tmp)
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+
+static void
 memset_erms(uint8_t * dst, uint8_t val, size_t len) {
     __asm__ volatile("rep stosb" : "+D"(dst), "+c"(len) : "a"(val) : "memory");
 }
@@ -179,21 +246,28 @@ use(uint8_t * dst, size_t len) {
     return len;
 };
 #ifndef TODO
-# define TODO 3
+# define TODO 6
 #endif
+
 #if TODO == 0
 # define FUNC memset_erms
 #elif TODO == 1
 # define FUNC memset_t
 #elif TODO == 2
 # define FUNC memset_nt
+#elif TODO == 3
+# define FUNC memset_nt_ns
+#elif TODO == 4
+# define FUNC memset_cd
+#elif TODO == 5
+# define FUNC memset_cd_ns
 #else
 # error "Unknown TODO"
 #endif
 
 #define NAME V_TO_STR(FUNC)
 
-#define LOG(...) //fprintf(stderr, __VA_ARGS__)
+#define LOG(...)  // fprintf(stderr, __VA_ARGS__)
 
 void * BENCH_FUNC
 bench(void * arg) {

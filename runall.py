@@ -7,12 +7,15 @@ usage = "Specify either 'memset' or 'memcpy' as argument"
 assert len(sys.argv) > 1, usage
 todo = sys.argv[1]
 
-TODOS = {"memcpy": (5, set(), 2**32, 500), "memset": (4, {0}, 2**32, 500)}
+TODOS = {
+    "memcpy": (5, {1, 4031, 4032, 4064, 4065}, 2**32, 500),
+    "memset": (4, {0}, 2**32, 500)
+}
 assert todo in TODOS, usage
 
 NCPUS = multiprocessing.cpu_count()
-exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
-exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2)]
+exes = [("{}-erms", 0), ("{}-t", 1), ("{}-nt", 2), ("{}-nt-ns", 3),
+        ("{}-cd", 4), ("{}-cd-ns", 5)]
 nthreads = []
 for i in range(0, 5):
     cpus = 1 << i
@@ -29,8 +32,8 @@ for i in range(1, 30):
 nthreads.append(NCPUS)
 nthreads = sorted(list(set(nthreads)))
 
-sizes = [(4096 << x) for x in range(6, 17)]
-aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4033]
+sizes = [(4096 << x) for x in range(0, 17)]
+aligns = [0, 1, 32, 2047, 2048, 2049, 4031, 4032, 4064, 4065]
 reuses = [x for x in range(0, TODOS[todo][0])]
 todo_aligns = TODOS[todo][1]
 max_num = TODOS[todo][2]

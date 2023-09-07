@@ -148,9 +148,79 @@ memcpy_nt(uint8_t * dst, uint8_t const * src, size_t len) {
         "subq $(" VEC_SIZE " * -4), %[dst]\n"
         "subq $(" VEC_SIZE " * -4), %[src]\n"
         "addq $(" VEC_SIZE " * -4), %[len]\n"
-        "jg 1b"
+        "jg 1b\n"
+        "sfence"
         : [src] "+r"(src), [dst] "+r"(dst), [len] "+r"(len), [v0] "=&v"(v0),
           [v1] "=&v"(v1), [v2] "=&v"(v2), [v3] "=&v"(v3)
+        :
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+static void
+memcpy_nt_ns(uint8_t * dst, uint8_t const * src, size_t len) {
+    __m256i v0, v1, v2, v3;
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "vmovdqu (" VEC_SIZE " * 0)(%[src]), %[v0]\n"
+        "vmovdqu (" VEC_SIZE " * 1)(%[src]), %[v1]\n"
+        "vmovdqu (" VEC_SIZE " * 2)(%[src]), %[v2]\n"
+        "vmovdqu (" VEC_SIZE " * 3)(%[src]), %[v3]\n"
+        "vmovntdq %[v0], (" VEC_SIZE " * 0)(%[dst])\n"
+        "vmovntdq %[v1], (" VEC_SIZE " * 1)(%[dst])\n"
+        "vmovntdq %[v2], (" VEC_SIZE " * 2)(%[dst])\n"
+        "vmovntdq %[v3], (" VEC_SIZE " * 3)(%[dst])\n"
+        "subq $(" VEC_SIZE " * -4), %[dst]\n"
+        "subq $(" VEC_SIZE " * -4), %[src]\n"
+        "addq $(" VEC_SIZE " * -4), %[len]\n"
+        "jg 1b"
+          : [src] "+r"(src), [dst] "+r"(dst), [len] "+r"(len), [v0] "=&v"(v0),
+          [v1] "=&v"(v1), [v2] "=&v"(v2), [v3] "=&v"(v3)
+        :
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+static void
+memcpy_cd(uint8_t * dst, uint8_t const * src, size_t len) {
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "movdir64b 64(%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "subq $-128, %[src]\n"
+        "addq $-128, %[len]\n"
+        "jg 1b\n"
+        "sfence"
+        :  [dst] "+r"(dst), [len] "+r"(len),[src]"+r" (src)
+        :
+        : "cc", "memory");
+    // clang-format on
+#undef VEC_SIZE
+};
+
+
+static void
+memcpy_cd_ns(uint8_t * dst, uint8_t const * src, size_t len) {
+#define VEC_SIZE "32"
+    // clang-format off
+    __asm__ volatile(
+        "1:\n"
+        "movdir64b (%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "movdir64b 64(%[src]), %[dst]\n"
+        "subq $-64, %[dst]\n"
+        "subq $-128, %[src]\n"
+        "addq $-128, %[len]\n"
+        "jg 1b"
+        :  [dst] "+r"(dst), [len] "+r"(len),[src]"+r" (src)
         :
         : "cc", "memory");
     // clang-format on
@@ -200,14 +270,21 @@ use(uint8_t * dst, uint8_t const * src, size_t len) {
     return len;
 };
 #ifndef TODO
-# define TODO 3
+# define TODO 6
 #endif
+
 #if TODO == 0
 # define FUNC memcpy_erms
 #elif TODO == 1
 # define FUNC memcpy_t
 #elif TODO == 2
 # define FUNC memcpy_nt
+#elif TODO == 3
+# define FUNC memcpy_nt_ns
+#elif TODO == 4
+# define FUNC memcpy_cd
+#elif TODO == 5
+# define FUNC memcpy_cd_ns
 #else
 # error "Unknown TODO"
 #endif
